@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Ordenador de Números con Gráfica</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f6f9;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0px 4px 10px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    input, button {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+
+    button {
+      background-color: #0078d7;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background-color: #005fa3;
+    }
+
+    .mensaje {
+      text-align: center;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+
+    .mensaje.error {
+      color: red;
+    }
+
+    .mensaje.exito {
+      color: green;
+    }
+
+    .listas {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 20px;
+    }
+
+    .listas div {
+      width: 45%;
+    }
+
+    ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    li {
+      background: #e9ecef;
+      margin: 5px 0;
+      padding: 8px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    li button {
+      background-color: red;
+      border: none;
+      color: white;
+      padding: 5px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    li button:hover {
+      background-color: darkred;
+    }
+
+    canvas {
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Ordenador de Números con Gráfica</h1>
+    
+    <input type="number" id="numeroInput" placeholder="Ingresa un número">
+    <button id="agregarBtn">Agregar número</button>
+    <button id="ordenarBtn">Ordenar números</button>
+    <button id="reiniciarBtn">Reiniciar lista</button>
+    
+    <p id="mensaje" class="mensaje"></p>
+    
+    <div class="listas">
+      <div>
+        <h2>Lista Original</h2>
+        <ul id="listaOriginal"></ul>
+      </div>
+      <div>
+        <h2>Lista Ordenada</h2>
+        <ul id="listaOrdenada"></ul>
+      </div>
+    </div>
+
+    <h2 style="text-align:center;">Gráfica de Números</h2>
+    <canvas id="grafica"></canvas>
+  </div>
+
+  <!-- Librería Chart.js desde CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <script>
+    const numeroInput = document.getElementById("numeroInput");
+    const agregarBtn = document.getElementById("agregarBtn");
+    const ordenarBtn = document.getElementById("ordenarBtn");
+    const reiniciarBtn = document.getElementById("reiniciarBtn");
+    const listaOriginal = document.getElementById("listaOriginal");
+    const listaOrdenada = document.getElementById("listaOrdenada");
+    const mensaje = document.getElementById("mensaje");
+
+    let numeros = [];
+
+    // Configuración inicial de la gráfica
+    const ctx = document.getElementById("grafica").getContext("2d");
+    let grafica = new Chart(ctx, {
+      type: "bar",
+      data: {
+        labels: [],
+        datasets: [{
+          label: "Números",
+          data: [],
+          backgroundColor: "#0078d7"
+        }]
+      },
+      options: {
+        responsive: true,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        }
+      }
+    });
+
+    agregarBtn.addEventListener("click", () => {
+      const valor = numeroInput.value.trim();
+
+      if (valor === "") {
+        mostrarMensaje("Por favor ingresa un número.", "error");
+        return;
+      }
+
+      const numero = Number(valor);
+
+      if (numeros.includes(numero)) {
+        mostrarMensaje("Ese número ya está en la lista.", "error");
+        return;
+      }
+
+      numeros.push(numero);
+      guardarEnLocalStorage();
+      mostrarListaOriginal();
+      actualizarGrafica();
+      mostrarMensaje("Número agregado correctamente.", "exito");
+      numeroInput.value = "";
+    });
+
+    ordenarBtn.addEventListener("click", () => {
+      if (numeros.length === 0) {
+        mostrarMensaje("No hay números para ordenar.", "error");
+        return;
+      }
+      mostrarListaOrdenada();
+      mostrarMensaje("Lista ordenada correctamente.", "exito");
+    });
+
+    reiniciarBtn.addEventListener("click", () => {
+      numeros = [];
+      localStorage.removeItem("numeros");
+      listaOriginal.innerHTML = "";
+      listaOrdenada.innerHTML = "";
+      actualizarGrafica();
+      mostrarMensaje("Lista reiniciada.", "exito");
+    });
+
+    function mostrarListaOriginal() {
+      listaOriginal.innerHTML = "";
+      numeros.forEach((num, index) => {
+        const li = document.createElement("li");
+        li.textContent = num;
+
+        const eliminarBtn = document.createElement("button");
+        eliminarBtn.textContent = "Eliminar";
+        eliminarBtn.addEventListener("click", () => {
+          eliminarNumero(index);
+        });
+
+        li.appendChild(eliminarBtn);
+        listaOriginal.appendChild(li);
+      });
+    }
+
+    function mostrarListaOrdenada() {
+      listaOrdenada.innerHTML = "";
+      const ordenados = [...numeros].sort((a, b) => a - b);
+      ordenados.forEach(num => {
+        const li = document.createElement("li");
+        li.textContent = num;
+        listaOrdenada.appendChild(li);
+      });
+    }
+
+    function eliminarNumero(index) {
+      numeros.splice(index, 1);
+      guardarEnLocalStorage();
+      mostrarListaOriginal();
+      mostrarListaOrdenada();
+      actualizarGrafica();
+      mostrarMensaje("Número eliminado.", "exito");
+    }
+
+    function mostrarMensaje(texto, tipo) {
+      mensaje.textContent = texto;
+      mensaje.className = "mensaje " + tipo;
+    }
+
+    function guardarEnLocalStorage() {
+      localStorage.setItem("numeros", JSON.stringify(numeros));
+    }
+
+    function actualizarGrafica() {
+      grafica.data.labels = numeros.map((_, i) => "N" + (i+1));
+      grafica.data.datasets[0].data = numeros;
+      grafica.update();
+    }
+
+    // 🔹 Cargar lista desde LocalStorage al iniciar
+    window.addEventListener("DOMContentLoaded", () => {
+      const guardados = localStorage.getItem("numeros");
+      if (guardados) {
+        numeros = JSON.parse(guardados);
+        mostrarListaOriginal();
+        mostrarListaOrdenada();
+        actualizarGrafica();
+      }
+    });
+  </script>
+</body>
+</html>
